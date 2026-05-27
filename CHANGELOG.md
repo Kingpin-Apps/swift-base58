@@ -1,3 +1,9 @@
+## 0.1.3 (2026-05-27)
+
+### Fix
+
+- link swift-crypto on Android, WASI, Windows, and OpenBSD
+
 ## 0.1.2 (2025-09-25)
 
 ### Fix
