@@ -14,7 +14,7 @@ let package = Package(
     dependencies: [
         // Big integer arithmetic used by the Base58 implementation
         .package(url: "https://github.com/attaswift/BigInt.git", .upToNextMinor(from: "5.3.0")),
-        // Provides Crypto compatible APIs on Linux
+        // Provides Crypto-compatible APIs on non-Apple platforms.
         .package(url: "https://github.com/apple/swift-crypto.git", from: "3.15.1"),
     ],
     targets: [
@@ -22,8 +22,14 @@ let package = Package(
             name: "SwiftBase58",
             dependencies: [
                 .product(name: "BigInt", package: "BigInt"),
-                // Only link UncommonCrypto on Linux; on Apple platforms, CommonCrypto is available.
-                .product(name: "Crypto", package: "swift-crypto", condition: .when(platforms: [.linux])),
+                // Link swift-crypto on every non-Apple platform where it ships
+                // (Apple platforms use CryptoKit). Without this, `sha256` — used
+                // by `base58CheckEncode/Decode` — hits a runtime `fatalError`.
+                .product(
+                    name: "Crypto",
+                    package: "swift-crypto",
+                    condition: .when(platforms: [.linux, .android, .wasi, .windows, .openbsd])
+                ),
             ]
         ),
         .testTarget(
