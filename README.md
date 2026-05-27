@@ -11,7 +11,7 @@ Base58Swift is a Swift library that implements Base58 / Base58Check encodings fo
 Add the following to the `dependencies` section of your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/KINGH242/swift-base58.git", from: "0.1.0")
+.package(url: "https://github.com/Kingpin-Apps/swift-base58.git", from: "0.1.0")
 ```
 
 ## Usage
