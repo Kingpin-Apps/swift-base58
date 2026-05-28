@@ -12,19 +12,14 @@ let package = Package(
         ),
     ],
     dependencies: [
-        // Big integer arithmetic used by the Base58 implementation
-        .package(url: "https://github.com/attaswift/BigInt.git", .upToNextMinor(from: "5.3.0")),
-        // Provides Crypto-compatible APIs on non-Apple platforms.
-        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.15.1"),
+        .package(url: "https://github.com/attaswift/BigInt.git", from: "5.7.0"),
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.0"),
     ],
     targets: [
         .target(
             name: "SwiftBase58",
             dependencies: [
                 .product(name: "BigInt", package: "BigInt"),
-                // Link swift-crypto on every non-Apple platform where it ships
-                // (Apple platforms use CryptoKit). Without this, `sha256` — used
-                // by `base58CheckEncode/Decode` — hits a runtime `fatalError`.
                 .product(
                     name: "Crypto",
                     package: "swift-crypto",
