@@ -109,6 +109,18 @@ struct Base58Tests {
         #expect(Base58.base58CheckDecode("0oO1lL") == nil)
     }
     
+    @Test(arguments: ["", "1", "2", "11", "111", "zz", "zzz"])
+    func base58CheckDecodingShortInputReturnsNil(input: String) {
+        #expect(Base58.base58CheckDecode(input) == nil)
+    }
+    
+    @Test
+    func base58CheckRoundTripEmptyPayload() throws {
+        let encoded = Base58.base58CheckEncode([])
+        let decoded = try #require(Base58.base58CheckDecode(encoded))
+        #expect(decoded.isEmpty)
+    }
+    
     @Test
     func base58CheckDecodingWithInvalidChecksum() {
         #expect(Base58.base58CheckDecode("tz1Y3qqTg9HdrzZGbEjiCPmwuZ7fWVxpPtrW") == nil)

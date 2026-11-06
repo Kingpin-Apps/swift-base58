@@ -28,12 +28,13 @@ public enum Base58 {
     /// - Parameter input: A base58check encoded input string to decode.
     /// - Returns: Bytes representing the decoded input, or nil if decoding failed.
     public static func base58CheckDecode(_ input: String) -> [UInt8]? {
-        guard let decodedChecksummedBytes = base58Decode(input) else {
+        guard let decodedChecksummedBytes = base58Decode(input),
+              decodedChecksummedBytes.count >= checksumLength else {
             return nil
         }
-        
+
         let decodedChecksum = decodedChecksummedBytes.suffix(checksumLength)
-        let decodedBytes = decodedChecksummedBytes.prefix(upTo: decodedChecksummedBytes.count - checksumLength)
+        let decodedBytes = decodedChecksummedBytes.dropLast(checksumLength)
         let calculatedChecksum = calculateChecksum([UInt8](decodedBytes))
         
         guard decodedChecksum.elementsEqual(calculatedChecksum, by: { $0 == $1 }) else {
