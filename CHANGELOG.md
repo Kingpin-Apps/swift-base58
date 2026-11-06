@@ -1,3 +1,13 @@
+## 0.2.0 (2026-11-06)
+
+### Feat
+
+- add maxDecodedLength to bound decoding of untrusted input
+
+### Fix
+
+- return nil from base58CheckDecode for inputs shorter than the checksum
+
 ## 0.1.5 (2026-09-22)
 
 ### Fix
