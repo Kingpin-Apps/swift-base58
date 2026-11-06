@@ -25,10 +25,17 @@ public enum Base58 {
     }
     
     /// Decode the given Base58Check encoded string to bytes.
-    /// - Parameter input: A base58check encoded input string to decode.
+    /// - Parameters:
+    ///   - input: A base58check encoded input string to decode.
+    ///   - maxDecodedLength: The maximum payload length in bytes, excluding the checksum. Inputs that would
+    ///     decode to a longer payload are rejected before any decoding work. Pass a limit when decoding
+    ///     untrusted input, since decoding cost grows quadratically with input length.
     /// - Returns: Bytes representing the decoded input, or nil if decoding failed.
-    public static func base58CheckDecode(_ input: String) -> [UInt8]? {
-        guard let decodedChecksummedBytes = base58Decode(input),
+    public static func base58CheckDecode(_ input: String, maxDecodedLength: Int? = nil) -> [UInt8]? {
+        let maxChecksummedLength = maxDecodedLength.map {
+            $0 > Int.max - checksumLength ? Int.max : $0 + checksumLength
+        }
+        guard let decodedChecksummedBytes = base58Decode(input, maxDecodedLength: maxChecksummedLength),
               decodedChecksummedBytes.count >= checksumLength else {
             return nil
         }
@@ -66,9 +73,18 @@ public enum Base58 {
     }
     
     /// Decode the given base58 encoded string to bytes.
-    /// - Parameter input: The base58 encoded input string to decode.
+    /// - Parameters:
+    ///   - input: The base58 encoded input string to decode.
+    ///   - maxDecodedLength: The maximum decoded length in bytes. Inputs that would decode to more bytes are
+    ///     rejected before any decoding work. Pass a limit when decoding untrusted input, since decoding cost
+    ///     grows quadratically with input length.
     /// - Returns: Bytes representing the decoded input, or nil if decoding failed.
-    public static func base58Decode(_ input: String) -> [UInt8]? {
+    public static func base58Decode(_ input: String, maxDecodedLength: Int? = nil) -> [UInt8]? {
+        if let maxDecodedLength,
+           input.utf8.count > maxEncodedLength(forDecodedLength: maxDecodedLength) {
+            return nil
+        }
+
         var answer = zero
         var i = BigUInt(1)
         let byteString = [UInt8](input.utf8)
@@ -85,7 +101,19 @@ public enum Base58 {
         // For every leading one on the input we need to add a leading 0 on the output
         let leadingOnes = byteString.prefix(while: { value in value == alphabet[0]})
         let leadingZeros: [UInt8] = Array(repeating: 0, count: leadingOnes.count)
-        return leadingZeros + bytes
+        let decoded = leadingZeros + bytes
+        if let maxDecodedLength, decoded.count > maxDecodedLength {
+            return nil
+        }
+        return decoded
+    }
+
+    /// The longest Base58 encoding of `decodedLength` bytes. Each byte needs at most log58(256) ≈ 1.366
+    /// characters, so `decodedLength * 1.38 + 1` is a safe upper bound.
+    private static func maxEncodedLength(forDecodedLength decodedLength: Int) -> Int {
+        guard decodedLength > 0 else { return 0 }
+        let (product, overflow) = decodedLength.multipliedReportingOverflow(by: 138)
+        return overflow ? Int.max : product / 100 + 1
     }
     
     /// Calculate a checksum for a given input by hashing twice and then taking the first four bytes.

@@ -113,14 +113,65 @@ struct Base58Tests {
     func base58CheckDecodingShortInputReturnsNil(input: String) {
         #expect(Base58.base58CheckDecode(input) == nil)
     }
-    
+
     @Test
     func base58CheckRoundTripEmptyPayload() throws {
         let encoded = Base58.base58CheckEncode([])
         let decoded = try #require(Base58.base58CheckDecode(encoded))
         #expect(decoded.isEmpty)
     }
-    
+
+    @Test
+    func base58DecodeRespectsMaxDecodedLength() throws {
+        let encoded = "3yxU3u1igY8WkgtjK92fbJQCd4BZiiT1v25f" // 26 bytes
+        let decoded = try #require(Base58.base58Decode(encoded, maxDecodedLength: 26))
+        #expect(decoded == [UInt8]("abcdefghijklmnopqrstuvwxyz".utf8))
+        #expect(Base58.base58Decode(encoded, maxDecodedLength: 25) == nil)
+    }
+
+    @Test
+    func base58DecodeMaxDecodedLengthCountsLeadingZeros() {
+        #expect(Base58.base58Decode("1111", maxDecodedLength: 4) == [0, 0, 0, 0])
+        #expect(Base58.base58Decode("1111", maxDecodedLength: 3) == nil)
+        #expect(Base58.base58Decode("", maxDecodedLength: 0) == [])
+    }
+
+    @Test
+    func base58CheckDecodeRespectsMaxDecodedLength() throws {
+        let address = "tz1Y3qqTg9HdrzZGbEjiCPmwuZ7fWVxpPtRw" // 23-byte payload
+        let payload = try #require(Base58.base58CheckDecode(address, maxDecodedLength: 23))
+        #expect(payload.count == 23)
+        #expect(Base58.base58CheckDecode(address, maxDecodedLength: 22) == nil)
+    }
+
+    @Test
+    func maxDecodedLengthNeverRejectsValidEncodings() {
+        var generator = SystemRandomNumberGenerator()
+        for length in 0...128 {
+            for leadingZeros in [0, 1, length / 2, length] where leadingZeros <= length {
+                let bytes = [UInt8](repeating: 0, count: leadingZeros)
+                    + (leadingZeros..<length).map { _ in UInt8.random(in: 1...255, using: &generator) }
+                let encoded = Base58.base58Encode(bytes)
+                #expect(Base58.base58Decode(encoded, maxDecodedLength: length) == bytes)
+                #expect(Base58.base58CheckDecode(Base58.base58CheckEncode(bytes), maxDecodedLength: length) == bytes)
+            }
+        }
+    }
+
+    @Test
+    func maxDecodedLengthHandlesExtremeValues() {
+        #expect(Base58.base58Decode("z", maxDecodedLength: Int.max) == [57])
+        #expect(Base58.base58CheckDecode("tz1Y3qqTg9HdrzZGbEjiCPmwuZ7fWVxpPtRw", maxDecodedLength: Int.max) != nil)
+        #expect(Base58.base58Decode("z", maxDecodedLength: -1) == nil)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func oversizedInputIsRejectedBeforeDecoding() {
+        let huge = String(repeating: "z", count: 1_000_000)
+        #expect(Base58.base58Decode(huge, maxDecodedLength: 64) == nil)
+        #expect(Base58.base58CheckDecode(huge, maxDecodedLength: 64) == nil)
+    }
+
     @Test
     func base58CheckDecodingWithInvalidChecksum() {
         #expect(Base58.base58CheckDecode("tz1Y3qqTg9HdrzZGbEjiCPmwuZ7fWVxpPtrW") == nil)
