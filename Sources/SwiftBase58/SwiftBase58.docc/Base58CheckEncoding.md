@@ -163,14 +163,9 @@ func validateBase58CheckString(_ input: String) -> Bool {
         return false
     }
     
-    // Check minimum length (data + 4-byte checksum)
-    guard input.count >= 5 else {
-        print("String too short for Base58Check")
-        return false
-    }
-    
-    // Verify checksum
-    guard Base58.base58CheckDecode(input) != nil else {
+    // Verify checksum. Inputs too short to hold a checksum, or longer than
+    // the expected payload, are rejected with nil.
+    guard Base58.base58CheckDecode(input, maxDecodedLength: 64) != nil else {
         print("Checksum verification failed")
         return false
     }

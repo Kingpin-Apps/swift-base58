@@ -67,6 +67,21 @@ if let result = Base58.base58Decode(invalidString) {
 }
 ```
 
+### Decoding Untrusted Input
+
+Decoding cost grows quadratically with input length. When the input comes from users or the network, pass `maxDecodedLength` so that oversized strings are rejected before any decoding work:
+
+```swift
+// A Bitcoin P2PKH address payload is 21 bytes (version + 20-byte hash)
+if let payload = Base58.base58CheckDecode(userInput, maxDecodedLength: 21) {
+    print("Valid address payload: \(payload)")
+} else {
+    print("Invalid, corrupted, or too long")
+}
+```
+
+For `base58CheckDecode`, `maxDecodedLength` is the payload length and excludes the 4-byte checksum.
+
 ## Common Use Cases
 
 ### Cryptocurrency Addresses

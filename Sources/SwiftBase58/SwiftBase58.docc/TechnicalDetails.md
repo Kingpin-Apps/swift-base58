@@ -52,13 +52,20 @@ public static func base58Encode(_ bytes: [UInt8]) -> String {
 
 The decoding process reverses the encoding:
 
-1. **Validate characters**: Ensure all characters exist in the Base58 alphabet
-2. **Convert from base58**: Multiply each character's value by appropriate power of 58
-3. **Handle leading '1's**: Leading '1' characters become leading zero bytes
-4. **Convert to bytes**: Extract bytes from the resulting BigUInt
+1. **Enforce the length limit**: If `maxDecodedLength` is given, reject inputs too long to decode within it
+2. **Validate characters**: Ensure all characters exist in the Base58 alphabet
+3. **Convert from base58**: Multiply each character's value by appropriate power of 58
+4. **Handle leading '1's**: Leading '1' characters become leading zero bytes
+5. **Convert to bytes**: Extract bytes from the resulting BigUInt
 
 ```swift
-public static func base58Decode(_ input: String) -> [UInt8]? {
+public static func base58Decode(_ input: String, maxDecodedLength: Int? = nil) -> [UInt8]? {
+    // Reject oversized input before any BigUInt work
+    if let maxDecodedLength,
+       input.utf8.count > maxEncodedLength(forDecodedLength: maxDecodedLength) {
+        return nil
+    }
+    
     var answer = zero
     var i = BigUInt(1)
     let byteString = [UInt8](input.utf8)
@@ -103,17 +110,12 @@ The library uses conditional compilation for cross-platform SHA256:
 
 ```swift
 private static func sha256(_ data: [UInt8]) -> [UInt8] {
-    #if canImport(CommonCrypto) || canImport(UncommonCrypto)
-    // Hardware-optimized implementation on Apple platforms
-    // Compatible implementation on Linux
-    var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-    data.withUnsafeBytes { rawBuffer in
-        _ = CC_SHA256(rawBuffer.baseAddress, CC_LONG(rawBuffer.count), &hash)
-    }
-    return hash
-    
-    #elseif canImport(CryptoKit)
-    // Modern Swift platforms
+    #if canImport(CryptoKit)
+    // Apple platforms
+    let digest = SHA256.hash(data: Data(data))
+    return Array(digest)
+    #elseif canImport(Crypto)
+    // swift-crypto on Linux, Android, Windows, WASI, OpenBSD
     let digest = SHA256.hash(data: Data(data))
     return Array(digest)
     
@@ -162,7 +164,7 @@ let bytes = answer.serialize()
 | Operation | Time Complexity | Notes |
 |-----------|----------------|-------|
 | Encoding | O(n × log₅₈(2^(8n))) | Where n is input byte length |
-| Decoding | O(m × log₂(58^m)) | Where m is input string length |
+| Decoding | O(m²) | Where m is input string length; bound it with `maxDecodedLength` for untrusted input |
 | Checksum | O(n) | Linear in data size for SHA256 |
 
 ### Optimization Strategies
@@ -189,7 +191,7 @@ Encoding operations are designed to be infallible for valid inputs:
 Decoding operations return optionals to handle invalid inputs:
 
 ```swift
-public static func base58Decode(_ input: String) -> [UInt8]? {
+public static func base58Decode(_ input: String, maxDecodedLength: Int? = nil) -> [UInt8]? {
     // Fail if invalid characters found
     guard let alphabetIndex = alphabet.firstIndex(of: char) else {
         return nil
@@ -201,9 +203,10 @@ public static func base58Decode(_ input: String) -> [UInt8]? {
 ### Checksum Validation
 
 ```swift
-public static func base58CheckDecode(_ input: String) -> [UInt8]? {
-    guard let decodedChecksummedBytes = base58Decode(input) else {
-        return nil // Invalid Base58
+public static func base58CheckDecode(_ input: String, maxDecodedLength: Int? = nil) -> [UInt8]? {
+    guard let decodedChecksummedBytes = base58Decode(input, maxDecodedLength: maxChecksummedLength),
+          decodedChecksummedBytes.count >= checksumLength else {
+        return nil // Invalid Base58, too long, or too short to hold a checksum
     }
     
     // Extract and verify checksum

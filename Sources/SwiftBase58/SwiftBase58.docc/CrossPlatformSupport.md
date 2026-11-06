@@ -17,38 +17,31 @@ SwiftBase58 is designed to work seamlessly across all Swift-supported platforms.
 - **visionOS**: 1.0+ (automatically supported)
 
 ### Other Platforms
-- **Linux**: All distributions with Swift 5.7+
-- **Windows**: With Swift for Windows (5.7+)
+- **Linux**, **Android**, **Windows**, **WASI**, **OpenBSD**: Swift 6.0+
+
+All platforms require Swift 6.0 or later.
 
 ## Platform-Specific Implementation Details
 
 ### Cryptographic Libraries
 
-SwiftBase58 uses different crypto libraries depending on the platform:
+SwiftBase58 needs SHA256 only for Base58Check checksums. It picks the implementation at compile time:
 
 ```swift
-#if canImport(CommonCrypto)
-import CommonCrypto        // Apple platforms
-#elseif canImport(UncommonCrypto)
-import UncommonCrypto     // Linux and other platforms
-#elseif canImport(CryptoKit)
-import CryptoKit          // Fallback for newer platforms
+#if canImport(CryptoKit)
+import CryptoKit   // Apple platforms
+#elseif canImport(Crypto)
+import Crypto      // swift-crypto on all other platforms
 #endif
 ```
 
 #### Apple Platforms (macOS, iOS, etc.)
-- Uses **CommonCrypto** framework
-- Provides hardware-accelerated SHA256 operations
-- No additional dependencies required
+- Uses Apple's **CryptoKit** framework
+- No additional dependencies are linked
 
-#### Linux
-- Uses **UncommonCrypto** package (automatically included)
-- Provides CommonCrypto-compatible API
-- Linked only on Linux platforms through Package.swift conditions
-
-#### Modern Swift Platforms
-- Falls back to **CryptoKit** when available
-- Provides consistent API across platforms
+#### Linux, Android, Windows, WASI, OpenBSD
+- Uses Apple's open-source **swift-crypto** package, which exposes the same `SHA256` API as CryptoKit
+- Linked only on these platforms through Package.swift conditions
 
 ### Platform-Specific Package Configuration
 
@@ -59,11 +52,11 @@ The Package.swift uses conditional compilation to include dependencies only when
     name: "SwiftBase58",
     dependencies: [
         .product(name: "BigInt", package: "BigInt"),
-        // Only link UncommonCrypto on Linux
+        // Only link swift-crypto where CryptoKit is unavailable
         .product(
-            name: "UncommonCrypto",
-            package: "UncommonCrypto.swift",
-            condition: .when(platforms: [.linux])
+            name: "Crypto",
+            package: "swift-crypto",
+            condition: .when(platforms: [.linux, .android, .wasi, .windows, .openbsd])
         )
     ]
 )

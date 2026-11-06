@@ -7,7 +7,7 @@ How to add SwiftBase58 to your Swift project.
 ### Xcode Integration
 
 1. In Xcode, go to **File** → **Add Package Dependencies...**
-2. Enter the package URL: `https://github.com/KINGH242/swift-base58.git`
+2. Enter the package URL: `https://github.com/Kingpin-Apps/swift-base58.git`
 3. Choose the version rule (recommended: "Up to Next Minor Version")
 4. Click **Add Package**
 5. Select the **SwiftBase58** library and add it to your target
@@ -17,13 +17,13 @@ How to add SwiftBase58 to your Swift project.
 Add SwiftBase58 as a dependency in your `Package.swift` file:
 
 ```swift
-// swift-tools-version: 5.7
+// swift-tools-version: 6.0
 import PackageDescription
 
 let package = Package(
     name: "YourPackage",
     dependencies: [
-        .package(url: "https://github.com/KINGH242/swift-base58.git", from: "0.1.0")
+        .package(url: "https://github.com/Kingpin-Apps/swift-base58.git", from: "0.2.0")
     ],
     targets: [
         .target(
@@ -44,7 +44,9 @@ SwiftBase58 supports the following platforms:
 - **iOS**: 13.0+
 - **tvOS**: 13.0+
 - **watchOS**: 6.0+
-- **Linux**: Swift 5.7+
+- **Linux, Android, Windows, WASI, OpenBSD**: Swift 6.0+ (uses swift-crypto)
+
+SwiftBase58 requires Swift 6.0 or later (swift-tools-version 6.0).
 
 ## Import in Your Code
 
